@@ -1,5 +1,5 @@
 const User = require('../models/User');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 
@@ -12,21 +12,23 @@ const jwt = require('jsonwebtoken');
         });   
     };
 
-    exports.login = async(req, res) => {
-        const { username, password } =req.body;
-        User.findByUsername(username, async (err,result) => {
-            if (err) return res.status(500).send(err);
-            if (result.length === 0)
-                return res.status(404).send('Invalid  username or password');
+   exports.login = async(req, res) => {
+    const { username, password } = req.body;
+    User.findByUsername(username, async (err, result) => {
+        if (err) return res.status(500).send(err);
+        if (result.length === 0) {
+            console.log('No user found for:', username);
+            return res.status(404).send('Invalid username or password');
+        }
+        const user = result[0];
+        console.log('User found:', user);
+        const isMatch = await bcrypt.compare(password, user.password);
+        console.log('Password match:', isMatch);
+        if (!isMatch) return res.status(404).send('Invalid username or password');
 
-                const user = result[0];
-                const isMatch = await bcrypt.compare(password, user.password);
-                if (!isMatch) return res.status(404).send('Invalid username or password');
-
-                const token = jwt.sign({ id : user.id,},process.env.JWT_SECRET);
-                res.json ({token});
-        });
-    };
-
+        const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET);
+        res.json({ token });
+    });
+};
 
 
